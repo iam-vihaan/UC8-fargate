@@ -35,7 +35,7 @@ No resources.
 | <a name="input_container_memory"></a> [container\_memory](#input\_container\_memory) | Memory for containers | `number` | `512` | no |
 | <a name="input_desired_capacity"></a> [desired\_capacity](#input\_desired\_capacity) | Desired number of instances | `number` | `1` | no |
 | <a name="input_environment"></a> [environment](#input\_environment) | Environment name | `string` | `"dev"` | no |
-| <a name="input_project_name"></a> [project\_name](#input\_project\_name) | Project name | `string` | `"healthcare-app"` | no |
+| <a name="input_project_name"></a> [project\_name](#input\_project\_name) | Project name | `string` | `"appoint-patient"` | no |
 | <a name="input_vpc_cidr"></a> [vpc\_cidr](#input\_vpc\_cidr) | CIDR block for VPC | `string` | `"10.0.0.0/16"` | no |
 
 ## Outputs
