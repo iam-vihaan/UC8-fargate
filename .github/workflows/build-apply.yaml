@@ -52,8 +52,8 @@ jobs:
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::784733659029:role/oidc-role
+          aws-region: us-east-1
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -84,8 +84,8 @@ jobs:
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::784733659029:role/oidc-role
+          aws-region: us-east-1
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -116,8 +116,8 @@ jobs:
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::784733659029:role/oidc-role
+          aws-region: us-east-1
 
       - name: Update Patient Service
         if: needs.build-patient-service.result == 'success'
