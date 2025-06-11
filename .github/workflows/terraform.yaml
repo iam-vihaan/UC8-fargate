@@ -48,7 +48,7 @@ jobs:
     needs: lint-and-security
 
     env:
-      AWS_REGION: ${{ secrets.AWS_REGION || 'ap-south-1' }}
+      AWS_REGION: us-east-1
 
     defaults:
       run:
@@ -61,8 +61,8 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::199570228070:role/oidc-demo-role
-          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::784733659029:role/oidc-role
+          aws-region: us-east-1
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -102,8 +102,8 @@ jobs:
       - name: Generate Terraform Docs and Commit
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          git config --local user.email "vnagaraj984@gmail.com"
-          git config --local user.name "nag9844"
+          git config --local user.email "alakasi07@gmail.com"
+          git config --local user.name "kasi"
 
           terraform-docs markdown . > README.md.new
           mv README.md.new README.md
