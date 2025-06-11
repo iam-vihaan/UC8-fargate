@@ -49,7 +49,7 @@ jobs:
     needs: lint-and-security
 
     env:
-      AWS_REGION: ${{ secrets.AWS_REGION || 'ap-south-1' }}
+      AWS_REGION: us-east-1
 
     defaults:
       run:
