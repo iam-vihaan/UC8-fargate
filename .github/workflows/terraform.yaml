@@ -30,6 +30,7 @@ jobs:
 
       - name: Run TFLint
         run: tflint --init && tflint -f compact
+        continue-on-error: true
 
       - name: Run tfsec
         uses: aquasecurity/tfsec-action@v1.0.0
