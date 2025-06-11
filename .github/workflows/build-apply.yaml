@@ -1,0 +1,150 @@
+name: Build and Deploy Microservices
+
+on:
+  push:
+    branches: [main]
+    paths: ['microservices/**']
+  pull_request:
+    branches: [main]
+    paths: ['microservices/**']
+  workflow_dispatch:
+
+permissions:
+  id-token:   write
+  contents:   write     
+  pull-requests: write
+
+env:
+  AWS_REGION: ap-south-1
+
+jobs:
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      patient-service: ${{ steps.changes.outputs.patient-service }}
+      appointment-service: ${{ steps.changes.outputs.appointment-service }}
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: Detect Changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            patient-service:
+              - 'microservices/patient-service/**'
+            appointment-service:
+              - 'microservices/appointment-service/**'
+
+  build-patient-service:
+    name: Build Patient Service
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.patient-service == 'true'
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image
+        working-directory: microservices/patient-service
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: healthcare-app-dev-patient-service
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+  build-appointment-service:
+    name: Build Appointment Service
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.appointment-service == 'true'
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image
+        working-directory: microservices/appointment-service
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: healthcare-app-dev-appointment-service
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+  deploy:
+    name: Deploy to ECS
+    runs-on: ubuntu-latest
+    needs: [build-patient-service, build-appointment-service]
+    if: always() && (needs.build-patient-service.result == 'success' || needs.build-appointment-service.result == 'success') && github.ref == 'refs/heads/main'
+    
+    environment:
+      name: production
+    
+    steps:
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update Patient Service
+        if: needs.build-patient-service.result == 'success'
+        run: |
+          aws ecs update-service \
+            --cluster healthcare-app-dev-cluster \
+            --service healthcare-app-dev-patient-service \
+            --force-new-deployment
+
+      - name: Update Appointment Service
+        if: needs.build-appointment-service.result == 'success'
+        run: |
+          aws ecs update-service \
+            --cluster healthcare-app-dev-cluster \
+            --service healthcare-app-dev-appointment-service \
+            --force-new-deployment
+
+      - name: Wait for services to stabilize
+        run: |
+          if [[ "${{ needs.build-patient-service.result }}" == "success" ]]; then
+            aws ecs wait services-stable \
+              --cluster healthcare-app-dev-cluster \
+              --services healthcare-app-dev-patient-service
+          fi
+          
+          if [[ "${{ needs.build-appointment-service.result }}" == "success" ]]; then
+            aws ecs wait services-stable \
+              --cluster healthcare-app-dev-cluster \
+              --services healthcare-app-dev-appointment-service
+          fi
